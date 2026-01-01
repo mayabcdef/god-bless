@@ -121,6 +121,7 @@ class GenerationPipeline:
             else:
                 return response_1_views.ply_file_base64
 
+
     async def generate_gs(self, request: GenerateRequest) -> GenerateResponse:
         """
         Execute full generation pipeline.
@@ -182,6 +183,7 @@ class GenerationPipeline:
 
         # Resolve Trellis parameters from request
         trellis_params: TrellisParams = request.trellis_params
+        print(f"Trellis parameters: {trellis_params}")
 
         # 3. Generate the 3D model
         trellis_result_3_views = self.trellis.generate(
@@ -190,16 +192,18 @@ class GenerationPipeline:
                 seed=request.seed,
                 params=trellis_params,
             ),
-            threshold=10,
+            threshold=25000,
+            mode="multidiffusion",
         )
 
         trellis_result_1_views = self.trellis.generate(
             TrellisRequest(
-                images=[original_image_without_background, image_without_background],
+                images=[image_without_background],
                 seed=request.seed,
                 params=trellis_params,
             ),
-            threshold=10,
+            threshold=36000,
+            mode="stochastic",
         )
 
         # Save generated files

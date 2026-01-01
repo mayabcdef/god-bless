@@ -14,6 +14,7 @@ from config import Settings
 from logger_config import logger
 from libs.trellis.pipelines import TrellisImageTo3DPipeline
 from schemas import TrellisResult, TrellisRequest, TrellisParams
+from typing import Literal
 
 class TrellisService:
     def __init__(self, settings: Settings):
@@ -47,6 +48,7 @@ class TrellisService:
         self,
         trellis_request: TrellisRequest,
         threshold: int = 25000,
+        mode: Literal["stochastic", "multidiffusion"] = "multidiffusion"
     ) -> TrellisResult:
         if not self.pipeline:
             raise RuntimeError("Trellis pipeline not loaded.")
@@ -74,6 +76,7 @@ class TrellisService:
                 formats=["gaussian"],
                 num_oversamples=params.num_oversamples,
                 voxel_threshold=threshold,
+                mode=mode,
             )
 
             generation_time = time.time() - start
