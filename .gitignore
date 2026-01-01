@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+generated_outputs/
+.idea/
+.vscode/
+*.pyc
+.env
+*.ply
+.gradio
+data
+**/*.ipynb
+**/*.zip
+**/*.png
+image
+/env.yml
+/competion-0

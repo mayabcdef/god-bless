@@ -1,0 +1,13 @@
+version: "1.0"
+app_name: 404-base-miner
+
+containers:
+  - name: base-miner
+    resource: h200-small
+    image: 
+    port: 10006
+    command: ["sh","-c"]
+    args: ["python serve.py"]
+    replicas:
+      min: 1
+      max: 1
