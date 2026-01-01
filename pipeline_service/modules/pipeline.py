@@ -198,7 +198,7 @@ class GenerationPipeline:
 
         trellis_result_1_views = self.trellis.generate(
             TrellisRequest(
-                images=[image_without_background],
+                images=[image_without_background, original_image_without_background],
                 seed=request.seed,
                 params=trellis_params,
             ),
