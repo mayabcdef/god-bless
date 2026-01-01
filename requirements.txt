@@ -1,0 +1,52 @@
+# PyTorch with CUDA 12.8 support
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.7.1
+torchvision==0.22.1
+torchaudio==2.7.1
+
+# Numpy (version <2 for compatibility)
+numpy<2
+
+# Image processing
+pillow==11.3.0
+opencv-python-headless
+
+# Scientific computing
+scipy==1.16.3
+
+# Data validation
+pydantic==2.12.5
+pydantic-settings==2.12.0
+pydantic-tensor==0.2.0
+
+# Sparse convolution
+spconv-cu126==2.3.8
+
+# Transformers and AI models
+transformers==4.55.4
+peft==0.18.0
+accelerate==1.12.0
+diffusers
+
+# Image segmentation dependencies
+timm==1.0.22
+kornia==0.8.2
+
+# FastAPI web framework
+fastapi==0.123.7
+uvicorn[standard]
+python-multipart
+
+# Utilities
+tqdm==4.67.1
+easydict==1.13
+loguru==0.7.3
+python-dotenv
+
+# 3D utilities
+git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
+
+# Note: The following need special installation:
+# - flash-attn: Install from prebuilt wheel (see installation instructions)
+# - pyspz: Install from GitHub releases
+# - ben2: pip install -e "git+https://github.com/PramaLLC/BEN2.git#egg=ben2"
