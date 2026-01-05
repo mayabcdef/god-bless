@@ -60,10 +60,12 @@ class TrellisService:
 
         start = time.time()
         try:
+            import random
+            seed = random.randint(0, 1000000)
             # Generate with voxel-aware texture steps
             outputs, num_voxels = self.pipeline.run_multi_image_with_voxel_count(
                 images_rgb,
-                seed=trellis_request.seed,
+                # seed=trellis_request.seed,
                 sparse_structure_sampler_params={
                     "steps": params.sparse_structure_steps,
                     "cfg_strength": params.sparse_structure_cfg_strength,
@@ -77,6 +79,7 @@ class TrellisService:
                 num_oversamples=params.num_oversamples,
                 voxel_threshold=threshold,
                 mode=mode,
+                seed=seed
             )
 
             generation_time = time.time() - start
