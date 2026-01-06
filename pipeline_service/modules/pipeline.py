@@ -11,7 +11,7 @@ import pyspz
 import torch
 import gc
 
-from config import Settings, settings
+from config import Settings, settings, BackgroundRemovalConfig
 from logger_config import logger
 from schemas import (
     GenerateRequest,
@@ -21,7 +21,8 @@ from schemas import (
     TrellisResult,
 )
 from modules.image_edit.qwen_edit_module import QwenEditModule
-from modules.background_removal.rmbg_manager import BackgroundRemovalService
+from modules.background_removal.ben2_module import BEN2BackgroundRemovalService
+from modules.background_removal.rmbg20_module import RMBG2BackgroundRemovalService
 from modules.gs_generator.trellis_manager import TrellisService
 from modules.utils import (
     secure_randint,
@@ -33,13 +34,27 @@ from modules.utils import (
 
 from compare import compare
 
+background_removal_settings = BackgroundRemovalConfig(
+    model_id="PramaLLC/BEN2",
+    input_image_size=(1024, 1024),
+    output_image_size=(518, 518),
+    padding_percentage=0.2,
+    limit_padding=True,
+    gpu=0
+)
+
 class GenerationPipeline:
     def __init__(self, settings: Settings = settings):
         self.settings = settings
 
         # Initialize modules
         self.qwen_edit = QwenEditModule(settings)
-        self.rmbg = BackgroundRemovalService(settings)
+        if self.settings.background_removal_model_id == "PramaLLC/BEN2":
+            self.rmbg = BEN2BackgroundRemovalService(background_removal_settings)
+        elif self.background_removal_model_id == "michealthegandalf11/alpha-extract":
+            self.rmbg = RMBG2BackgroundRemovalService(background_removal_settings)
+        else:
+            raise ValueError(f"Unsupported background removal model: {self.settings.background_removal.model_id}")
         self.trellis = TrellisService(settings)
 
     async def startup(self) -> None:
@@ -172,11 +187,13 @@ class GenerationPipeline:
         image_without_background_3 = self.rmbg.remove_background(image_edited_3)
 
         original_image_without_background = self.rmbg.remove_background(image)
-        # save to debug
+        # # save to debug
         # image_edited.save("image_edited.png")
-        # image_edited_2.save("image_edited_2.png")
+        # # image_edited_2.save("image_edited_2.png")
         # image_without_background.save("image_without_background.png")
         # image_without_background_2.save("image_without_background_2.png")
+        # image_without_background_3.save("image_without_background_3.png")
+        # original_image_without_background.save("original_image_without_background.png")
 
         trellis_result_3_views: Optional[TrellisResult] = None
         trellis_result_1_views: Optional[TrellisResult] = None
