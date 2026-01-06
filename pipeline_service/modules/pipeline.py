@@ -11,7 +11,7 @@ import pyspz
 import torch
 import gc
 
-from config import Settings, settings, BackgroundRemovalConfig
+from config import Settings, settings
 from logger_config import logger
 from schemas import (
     GenerateRequest,
@@ -24,6 +24,7 @@ from modules.image_edit.qwen_edit_module import QwenEditModule
 from modules.background_removal.ben2_module import BEN2BackgroundRemovalService
 from modules.background_removal.rmbg20_module import RMBG2BackgroundRemovalService
 from modules.gs_generator.trellis_manager import TrellisService
+from modules.birenef_pipe import BiRefNetBackgroundRemovalService
 from modules.utils import (
     secure_randint,
     set_random_seed,
@@ -34,14 +35,6 @@ from modules.utils import (
 
 from compare import compare
 
-background_removal_settings = BackgroundRemovalConfig(
-    model_id="PramaLLC/BEN2",
-    input_image_size=(1024, 1024),
-    output_image_size=(518, 518),
-    padding_percentage=0.2,
-    limit_padding=True,
-    gpu=0
-)
 
 class GenerationPipeline:
     def __init__(self, settings: Settings = settings):
@@ -49,12 +42,7 @@ class GenerationPipeline:
 
         # Initialize modules
         self.qwen_edit = QwenEditModule(settings)
-        if self.settings.background_removal_model_id == "PramaLLC/BEN2":
-            self.rmbg = BEN2BackgroundRemovalService(background_removal_settings)
-        elif self.background_removal_model_id == "michealthegandalf11/alpha-extract":
-            self.rmbg = RMBG2BackgroundRemovalService(background_removal_settings)
-        else:
-            raise ValueError(f"Unsupported background removal model: {self.settings.background_removal.model_id}")
+        self.rmbg = BiRefNetBackgroundRemovalService(settings)
         self.trellis = TrellisService(settings)
 
     async def startup(self) -> None:
@@ -169,6 +157,7 @@ class GenerationPipeline:
 
         # 2. Remove background
         image_without_background = self.rmbg.remove_background(image_edited)
+        image_without_background.convert("RGB")
 
         # add another view of the image
         image_edited_2 = self.qwen_edit.edit_image(
@@ -177,6 +166,7 @@ class GenerationPipeline:
             prompt="Show this object in right three-quarters view and make sure it is fully visible. Turn background neutral solid color contrasting with an object. Delete background details. Delete watermarks. Keep object colors. Sharpen image details",
         )
         image_without_background_2 = self.rmbg.remove_background(image_edited_2)
+        image_without_background_2.convert("RGB")
 
         # add another view of the image
         image_edited_3 = self.qwen_edit.edit_image(
@@ -185,9 +175,11 @@ class GenerationPipeline:
             prompt="Show this object in back view and make sure it is fully visible. Turn background neutral solid color contrasting with an object. Delete background details. Delete watermarks. Keep object colors. Sharpen image details",
         )
         image_without_background_3 = self.rmbg.remove_background(image_edited_3)
+        image_without_background_3.convert("RGB")
 
         original_image_without_background = self.rmbg.remove_background(image)
-        # # save to debug
+        original_image_without_background.convert("RGB")
+        # save to debug
         # image_edited.save("image_edited.png")
         # # image_edited_2.save("image_edited_2.png")
         # image_without_background.save("image_without_background.png")
@@ -219,7 +211,7 @@ class GenerationPipeline:
                 seed=request.seed,
                 params=trellis_params,
             ),
-            threshold=36000,
+            threshold=10,
             mode="stochastic",
         )
 
