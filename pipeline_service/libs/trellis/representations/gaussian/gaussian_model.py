@@ -1,7 +1,8 @@
 import torch
 import numpy as np
 from plyfile import PlyData, PlyElement
-from .general_utils import inverse_sigmoid, strip_symmetric, build_scaling_rotation
+
+from .general_utils import inverse_sigmoid, strip_symmetric, build_scaled_rotation_matrices
 import utils3d
 
 
@@ -44,7 +45,7 @@ class Gaussian:
 
     def setup_functions(self):
         def build_covariance_from_scaling_rotation(scaling, scaling_modifier, rotation):
-            L = build_scaling_rotation(scaling_modifier * scaling, rotation)
+            L = build_scaled_rotation_matrices(scaling_modifier * scaling, rotation)
             actual_covariance = L @ L.transpose(1, 2)
             symm = strip_symmetric(actual_covariance)
             return symm
@@ -57,10 +58,8 @@ class Gaussian:
             self.inverse_scaling_activation = lambda x: x + torch.log(-torch.expm1(-x))
 
         self.covariance_activation = build_covariance_from_scaling_rotation
-
         self.opacity_activation = torch.sigmoid
         self.inverse_opacity_activation = inverse_sigmoid
-
         self.rotation_activation = torch.nn.functional.normalize
         
         self.scale_bias = self.inverse_scaling_activation(torch.tensor(self.scaling_bias)).cuda()
@@ -97,6 +96,7 @@ class Gaussian:
     def from_scaling(self, scales):
         scales = torch.sqrt(torch.square(scales) - self.mininum_kernel_size ** 2)
         self._scaling = self.inverse_scaling_activation(scales) - self.scale_bias
+
         
     def from_rotation(self, rots):
         self._rotation = rots - self.rots_bias[None, :]
@@ -111,7 +111,7 @@ class Gaussian:
         self._opacity = self.inverse_opacity_activation(opacities) - self.opacity_bias
 
     def construct_list_of_attributes(self):
-        l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
+        l = ['x', 'y', 'z']
         # All channels except the 3 DC
         for i in range(self._features_dc.shape[1]*self._features_dc.shape[2]):
             l.append('f_dc_{}'.format(i))
@@ -121,7 +121,7 @@ class Gaussian:
         for i in range(self._rotation.shape[1]):
             l.append('rot_{}'.format(i))
         return l
-        
+
     def save_ply(self, path, transform=[[1, 0, 0], [0, 0, -1], [0, 1, 0]]):
         xyz = self.get_xyz.detach().cpu().numpy()
         normals = np.zeros_like(xyz)
@@ -129,7 +129,7 @@ class Gaussian:
         opacities = inverse_sigmoid(self.get_opacity).detach().cpu().numpy()
         scale = torch.log(self.get_scaling).detach().cpu().numpy()
         rotation = (self._rotation + self.rots_bias[None, :]).detach().cpu().numpy()
-        
+
         if transform is not None:
             transform = np.array(transform)
             xyz = np.matmul(xyz, transform.T)
@@ -140,12 +140,12 @@ class Gaussian:
         dtype_full = [(attribute, 'f4') for attribute in self.construct_list_of_attributes()]
 
         elements = np.empty(xyz.shape[0], dtype=dtype_full)
-        attributes = np.concatenate((xyz, normals, f_dc, opacities, scale, rotation), axis=1)
+        attributes = np.concatenate((xyz, f_dc, opacities, scale, rotation), axis=1)
         elements[:] = list(map(tuple, attributes))
         el = PlyElement.describe(elements, 'vertex')
         PlyData([el]).write(path)
 
-    def load_ply(self, path, transform=[[1, 0, 0], [0, 0, -1], [0, 1, 0]]):
+    def load_ply(self, path):
         plydata = PlyData.read(path)
 
         xyz = np.stack((np.asarray(plydata.elements[0]["x"]),
@@ -180,13 +180,6 @@ class Gaussian:
         for idx, attr_name in enumerate(rot_names):
             rots[:, idx] = np.asarray(plydata.elements[0][attr_name])
             
-        if transform is not None:
-            transform = np.array(transform)
-            xyz = np.matmul(xyz, transform)
-            rotation = utils3d.numpy.quaternion_to_matrix(rotation)
-            rotation = np.matmul(rotation, transform)
-            rotation = utils3d.numpy.matrix_to_quaternion(rotation)
-            
         # convert to actual gaussian attributes
         xyz = torch.tensor(xyz, dtype=torch.float, device=self.device)
         features_dc = torch.tensor(features_dc, dtype=torch.float, device=self.device).transpose(1, 2).contiguous()
@@ -206,4 +199,3 @@ class Gaussian:
         self._opacity = self.inverse_opacity_activation(opacities) - self.opacity_bias
         self._scaling = self.inverse_scaling_activation(torch.sqrt(torch.square(scales) - self.mininum_kernel_size ** 2)) - self.scale_bias
         self._rotation = rots - self.rots_bias[None, :]
-        
