@@ -61,7 +61,7 @@ class TrellisService:
         start = time.time()
         try:
             import random
-            seed = random.randint(0, 100000)
+            seed = random.randint(0, 1000000)
             # Generate with voxel-aware texture steps
             outputs, num_voxels = self.pipeline.run_multi_image_with_voxel_count(
                 images_rgb,

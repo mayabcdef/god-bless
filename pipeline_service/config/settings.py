@@ -6,6 +6,16 @@ from pydantic_settings import BaseSettings
 
 config_dir = Path(__file__).parent
 
+from pydantic import BaseModel
+class BackgroundRemovalConfig(BaseModel):
+    """Background removal configuration"""
+    model_id: str = "PramaLLC/BEN2"
+    input_image_size: tuple[int, int] = (1024, 1024)
+    output_image_size: tuple[int, int] = (518, 518)
+    padding_percentage: float = 0.2
+    limit_padding: bool = True
+    gpu: int = 0
+
 class Settings(BaseSettings):
     api_title: str = "3D Generation pipeline Service"
 
@@ -45,7 +55,7 @@ class Settings(BaseSettings):
     qwen_edit_prompt_path: Path = Field(default=config_dir.joinpath("qwen_edit_prompt.json"), env="QWEN_EDIT_PROMPT_PATH")
 
     # Backgorund removal settings
-    background_removal_model_id: str = Field(default="yuvraj108c/RMBG-2.0", env="BACKGROUND_REMOVAL_MODEL_ID")
+    background_removal_model_id: str = Field(default="PramaLLC/BEN2", env="BACKGROUND_REMOVAL_MODEL_ID")
     input_image_size: tuple[int, int] = Field(default=(1024, 1024), env="INPUT_IMAGE_SIZE") # (height, width)
     output_image_size: tuple[int, int] = Field(default=(518, 518), env="OUTPUT_IMAGE_SIZE") # (height, width)
     padding_percentage: float = Field(default=0.2, env="PADDING_PERCENTAGE")
